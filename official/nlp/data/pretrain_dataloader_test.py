@@ -24,8 +24,7 @@ from official.nlp.data import pretrain_dataloader
 
 
 def create_int_feature(values):
-  f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
-  return f
+  return tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
 
 
 def _create_fake_bert_dataset(
@@ -64,7 +63,7 @@ def _create_fake_bert_dataset(
       features["next_sentence_labels"] = create_int_feature([1])
 
     if use_position_id:
-      features["position_ids"] = create_int_feature(range(0, seq_length))
+      features["position_ids"] = create_int_feature(range(seq_length))
 
     tf_example = tf.train.Example(features=tf.train.Features(feature=features))
     writer.write(tf_example.SerializeToString())
@@ -76,7 +75,6 @@ def _create_fake_xlnet_dataset(
   """Creates a fake dataset."""
   writer = tf.io.TFRecordWriter(output_path)
   for _ in range(100):
-    features = {}
     input_ids = np.random.randint(100, size=(seq_length))
     num_boundary_indices = np.random.randint(1, seq_length)
 
@@ -87,7 +85,7 @@ def _create_fake_xlnet_dataset(
     else:
       input_mask = np.ones_like(input_ids)
 
-    features["input_mask"] = create_int_feature(input_mask)
+    features = {"input_mask": create_int_feature(input_mask)}
     features["input_word_ids"] = create_int_feature(input_ids)
     features["input_type_ids"] = create_int_feature(np.ones_like(input_ids))
     features["boundary_indices"] = create_int_feature(

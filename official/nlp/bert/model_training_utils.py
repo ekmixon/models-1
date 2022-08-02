@@ -61,8 +61,7 @@ def _get_input_iterator(input_fn, strategy):
   # pass callable that returns a dataset.
   if not callable(input_fn):
     raise ValueError('`input_fn` should be a closure that returns a dataset.')
-  iterator = iter(strategy.distribute_datasets_from_function(input_fn))
-  return iterator
+  return iter(strategy.distribute_datasets_from_function(input_fn))
 
 
 def _float_metric_value(metric):

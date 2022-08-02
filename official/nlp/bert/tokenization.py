@@ -46,7 +46,7 @@ def validate_case_matches_checkpoint(do_lower_case, init_checkpoint):
   if m is None:
     return
 
-  model_name = m.group(1)
+  model_name = m[1]
 
   lower_models = [
       "uncased_L-24_H-1024_A-16", "uncased_L-12_H-768_A-12",
@@ -89,14 +89,14 @@ def convert_to_unicode(text):
     elif isinstance(text, bytes):
       return text.decode("utf-8", "ignore")
     else:
-      raise ValueError("Unsupported string type: %s" % (type(text)))
+      raise ValueError(f"Unsupported string type: {type(text)}")
   elif six.PY2:
     if isinstance(text, str):
       return text.decode("utf-8", "ignore")
     elif isinstance(text, unicode):
       return text
     else:
-      raise ValueError("Unsupported string type: %s" % (type(text)))
+      raise ValueError(f"Unsupported string type: {type(text)}")
   else:
     raise ValueError("Not running on Python2 or Python 3?")
 
@@ -112,14 +112,14 @@ def printable_text(text):
     elif isinstance(text, bytes):
       return text.decode("utf-8", "ignore")
     else:
-      raise ValueError("Unsupported string type: %s" % (type(text)))
+      raise ValueError(f"Unsupported string type: {type(text)}")
   elif six.PY2:
     if isinstance(text, str):
       return text
     elif isinstance(text, unicode):
       return text.encode("utf-8")
     else:
-      raise ValueError("Unsupported string type: %s" % (type(text)))
+      raise ValueError(f"Unsupported string type: {type(text)}")
   else:
     raise ValueError("Not running on Python2 or Python 3?")
 
@@ -141,10 +141,7 @@ def load_vocab(vocab_file):
 
 def convert_by_vocab(vocab, items):
   """Converts a sequence of [tokens|ids] using the vocab."""
-  output = []
-  for item in items:
-    output.append(vocab[item])
-  return output
+  return [vocab[item] for item in items]
 
 
 def convert_tokens_to_ids(vocab, tokens):
@@ -158,10 +155,7 @@ def convert_ids_to_tokens(inv_vocab, ids):
 def whitespace_tokenize(text):
   """Runs basic whitespace cleaning and splitting on a piece of text."""
   text = text.strip()
-  if not text:
-    return []
-  tokens = text.split()
-  return tokens
+  return text.split() if text else []
 
 
 class FullTokenizer(object):
@@ -177,9 +171,7 @@ class FullTokenizer(object):
   def tokenize(self, text):
     split_tokens = []
     for token in self.basic_tokenizer.tokenize(text):
-      for sub_token in self.wordpiece_tokenizer.tokenize(token):
-        split_tokens.append(sub_token)
-
+      split_tokens.extend(iter(self.wordpiece_tokenizer.tokenize(token)))
     return split_tokens
 
   def convert_tokens_to_ids(self, tokens):
@@ -228,8 +220,7 @@ class BasicTokenizer(object):
       else:
         split_tokens.append(token)
 
-    output_tokens = whitespace_tokenize(" ".join(split_tokens))
-    return output_tokens
+    return whitespace_tokenize(" ".join(split_tokens))
 
   def _run_strip_accents(self, text):
     """Strips accents from a piece of text."""
@@ -268,9 +259,7 @@ class BasicTokenizer(object):
     for char in text:
       cp = ord(char)
       if self._is_chinese_char(cp):
-        output.append(" ")
-        output.append(char)
-        output.append(" ")
+        output.extend((" ", char, " "))
       else:
         output.append(char)
     return "".join(output)
@@ -285,17 +274,13 @@ class BasicTokenizer(object):
     # as is Japanese Hiragana and Katakana. Those alphabets are used to write
     # space-separated words, so they are not treated specially and handled
     # like the all of the other languages.
-    if ((cp >= 0x4E00 and cp <= 0x9FFF) or  #
-        (cp >= 0x3400 and cp <= 0x4DBF) or  #
-        (cp >= 0x20000 and cp <= 0x2A6DF) or  #
-        (cp >= 0x2A700 and cp <= 0x2B73F) or  #
-        (cp >= 0x2B740 and cp <= 0x2B81F) or  #
-        (cp >= 0x2B820 and cp <= 0x2CEAF) or
-        (cp >= 0xF900 and cp <= 0xFAFF) or  #
-        (cp >= 0x2F800 and cp <= 0x2FA1F)):  #
-      return True
-
-    return False
+    return ((cp >= 0x4E00 and cp <= 0x9FFF) or (cp >= 0x3400 and cp <= 0x4DBF)
+            or (cp >= 0x20000 and cp <= 0x2A6DF)
+            or (cp >= 0x2A700 and cp <= 0x2B73F)
+            or (cp >= 0x2B740 and cp <= 0x2B81F)
+            or (cp >= 0x2B820 and cp <= 0x2CEAF)
+            or (cp >= 0xF900 and cp <= 0xFAFF)
+            or (cp >= 0x2F800 and cp <= 0x2FA1F))
 
   def _clean_text(self, text):
     """Performs invalid character removal and whitespace cleanup on text."""
@@ -355,7 +340,7 @@ class WordpieceTokenizer(object):
         while start < end:
           substr = "".join(chars[start:end])
           if start > 0:
-            substr = "##" + substr
+            substr = f"##{substr}"
           if substr in self.vocab:
             cur_substr = substr
             break
@@ -377,24 +362,20 @@ def _is_whitespace(char):
   """Checks whether `chars` is a whitespace character."""
   # \t, \n, and \r are technically control characters but we treat them
   # as whitespace since they are generally considered as such.
-  if char == " " or char == "\t" or char == "\n" or char == "\r":
+  if char in [" ", "\t", "\n", "\r"]:
     return True
   cat = unicodedata.category(char)
-  if cat == "Zs":
-    return True
-  return False
+  return cat == "Zs"
 
 
 def _is_control(char):
   """Checks whether `chars` is a control character."""
   # These are technically control characters but we count them as whitespace
   # characters.
-  if char == "\t" or char == "\n" or char == "\r":
+  if char in ["\t", "\n", "\r"]:
     return False
   cat = unicodedata.category(char)
-  if cat in ("Cc", "Cf"):
-    return True
-  return False
+  return cat in ("Cc", "Cf")
 
 
 def _is_punctuation(char):
@@ -408,9 +389,7 @@ def _is_punctuation(char):
       (cp >= 91 and cp <= 96) or (cp >= 123 and cp <= 126)):
     return True
   cat = unicodedata.category(char)
-  if cat.startswith("P"):
-    return True
-  return False
+  return bool(cat.startswith("P"))
 
 
 def preprocess_text(inputs, remove_space=True, lower=False):
@@ -465,10 +444,8 @@ def encode_pieces(sp_model, text, sample=False):
   if six.PY2 and isinstance(text, six.text_type):
     text = six.ensure_binary(text, "utf-8")
 
-  if not sample:
-    pieces = sp_model.EncodeAsPieces(text)
-  else:
-    pieces = sp_model.SampleEncodeAsPieces(text, 64, 0.1)
+  pieces = (sp_model.SampleEncodeAsPieces(text, 64, 0.1)
+            if sample else sp_model.EncodeAsPieces(text))
   new_pieces = []
   for piece in pieces:
     piece = printable_text(piece)
@@ -504,8 +481,7 @@ def encode_ids(sp_model, text, sample=False):
     A list of token ids.
   """
   pieces = encode_pieces(sp_model, text, sample=sample)
-  ids = [sp_model.PieceToId(piece) for piece in pieces]
-  return ids
+  return [sp_model.PieceToId(piece) for piece in pieces]
 
 
 class FullSentencePieceTokenizer(object):

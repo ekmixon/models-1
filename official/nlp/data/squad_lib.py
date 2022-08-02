@@ -66,15 +66,13 @@ class SquadExample(object):
 
   def __repr__(self):
     s = ""
-    s += "qas_id: %s" % (tokenization.printable_text(self.qas_id))
+    s += f"qas_id: {tokenization.printable_text(self.qas_id)}"
     s += ", question_text: %s" % (
         tokenization.printable_text(self.question_text))
-    s += ", doc_tokens: [%s]" % (" ".join(self.doc_tokens))
+    s += f', doc_tokens: [{" ".join(self.doc_tokens)}]'
     if self.start_position:
       s += ", start_position: %d" % (self.start_position)
-    if self.start_position:
       s += ", end_position: %d" % (self.end_position)
-    if self.start_position:
       s += ", is_impossible: %r" % (self.is_impossible)
     return s
 
@@ -173,9 +171,7 @@ def read_squad_examples(input_file, is_training,
         input_data.extend(json.load(reader)["data"])
 
   def is_whitespace(c):
-    if c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F:
-      return True
-    return False
+    return c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F
 
   examples = []
   for entry in input_data:
@@ -227,7 +223,7 @@ def read_squad_examples(input_file, is_training,
                                                               1)])
             cleaned_answer_text = " ".join(
                 tokenization.whitespace_tokenize(orig_answer_text))
-            if actual_text.find(cleaned_answer_text) == -1:
+            if cleaned_answer_text not in actual_text:
               logging.warning("Could not find answer: '%s' vs. '%s'",
                               actual_text, cleaned_answer_text)
               continue
@@ -267,7 +263,7 @@ def convert_examples_to_features(examples,
     query_tokens = tokenizer.tokenize(example.question_text)
 
     if len(query_tokens) > max_query_length:
-      query_tokens = query_tokens[0:max_query_length]
+      query_tokens = query_tokens[:max_query_length]
 
     tok_to_orig_index = []
     orig_to_tok_index = []

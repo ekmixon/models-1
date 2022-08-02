@@ -194,13 +194,12 @@ def run_continuous_finetune(
     logging.info('Evaluation finished. Pretrain global_step: %d', global_step)
     train_utils.write_json_summary(model_dir, global_step, eval_metrics)
 
-    if not os.path.basename(model_dir):  # if model_dir.endswith('/')
-      summary_grp = os.path.dirname(model_dir) + '_' + task.name
-    else:
-      summary_grp = os.path.basename(model_dir) + '_' + task.name
+    summary_grp = (f'{os.path.basename(model_dir)}_{task.name}'
+                   if os.path.basename(model_dir) else
+                   f'{os.path.dirname(model_dir)}_{task.name}')
     summaries = {}
     for name, value in _flatten_dict(eval_metrics).items():
-      summaries[summary_grp + '/' + '-'.join(name)] = value
+      summaries[f'{summary_grp}/' + '-'.join(name)] = value
     train_utils.write_summary(summary_writer, global_step, summaries)
 
     train_utils.remove_ckpts(model_dir)
@@ -212,6 +211,4 @@ def run_continuous_finetune(
     # if we need gc here.
     gc.collect()
 
-  if run_post_eval:
-    return eval_metrics
-  return {}
+  return eval_metrics if run_post_eval else {}
